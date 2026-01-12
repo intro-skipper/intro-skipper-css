@@ -2,7 +2,7 @@
 
 :root {
     /* Skip button timing */
-    --skip-hide-duration: 20s;
+    --skip-hide-duration: 8s;
     --skip-btn-transition-speed: 0.2s;
 
     /* Skip button positioning - adjust as needed */
