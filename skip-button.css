@@ -1,0 +1,166 @@
+/* Skip Button Styles - ElegantFin Theme Integration */
+
+:root {
+    /* Skip button timing */
+    --skip-hide-duration: 20s;
+    --skip-btn-transition-speed: 0.2s;
+
+    /* Skip button positioning - adjust as needed */
+    --skip-btn-bottom: 9em;
+    --skip-btn-right: 2.5em;
+
+    /* Skip button colors - using ElegantFin palette */
+    --skip-btn-bg: var(--headerColor, rgba(30, 40, 54, 0.8));
+    --skip-btn-bg-hover: rgba(255, 255, 255, 0.95);
+    --skip-btn-border-color: var(--textColor, rgb(209, 213, 219));
+    --skip-btn-text-color: var(--textColor, rgb(209, 213, 219));
+    --skip-btn-text-color-hover: var(--darkerGradientPoint, #111827);
+    --skip-btn-shadow: var(--shadow, 0 0.1em 0.15em rgba(0, 0, 0, 0.3));
+
+    /* Progress gradient colors - using theme accent */
+    --skip-btn-progress-color: var(--activeColorAlpha, rgba(119, 91, 244, 0.9));
+    --skip-btn-progress-bg: var(--headerColor, rgba(30, 40, 54, 0.8));
+}
+
+/* Container positioning - overrides jellyfin-skipbnt defaults */
+.skip-button-container {
+    bottom: var(--skip-btn-bottom);
+    display: flex;
+    justify-content: flex-end;
+    padding-right: var(--skip-btn-right);
+    transition: bottom 0.3s ease-out;
+}
+
+/* Dynamic positioning based on OSD visibility */
+/* When OSD is hidden, button can sit lower */
+body:has(.videoOsdBottom.videoOsdBottom-hidden) .skip-button-container,
+body:has(.videoOsdBottom.hide) .skip-button-container {
+    --skip-btn-bottom: 3em;
+}
+
+/* When OSD is visible, keep button above controls */
+body:has(.videoOsdBottom:not(.videoOsdBottom-hidden):not(.hide)) .skip-button-container {
+    --skip-btn-bottom: 9em;
+}
+
+/* Base button styles */
+.skip-button {
+    padding: 0.75em 2.125em 0.75em 1.75em;
+    flex-direction: row-reverse;
+    cursor: pointer;
+
+    /* Appearance */
+    background-color: var(--skip-btn-bg);
+    border: var(--borderWidthDouble, 0.12em) solid var(--skip-btn-border-color);
+    border-radius: var(--largerRadius, 1.25em);
+    color: var(--skip-btn-text-color);
+    font-weight: 700;
+
+    /* Shadows & effects */
+    text-shadow: var(--skip-btn-shadow);
+    box-shadow:
+        var(--skip-btn-shadow),
+        inset 0 0.0625em 0 rgba(255, 255, 255, 0.1);
+
+    /* Glassmorphism effect */
+    -webkit-backdrop-filter: var(--blurDefault, blur(5px));
+    backdrop-filter: var(--blurDefault, blur(5px));
+
+    /* Performance: specific properties instead of 'all' */
+    transition:
+        background-color var(--skip-btn-transition-speed) ease-out,
+        border-color var(--skip-btn-transition-speed) ease-out,
+        color var(--skip-btn-transition-speed) ease-out,
+        box-shadow var(--skip-btn-transition-speed) ease-out,
+        opacity var(--skip-btn-transition-speed) ease-out,
+        transform 0.1s ease-out;
+}
+
+.skip-button>*:last-child {
+    margin-right: 0.5em;
+}
+
+/* Interactive states */
+.skip-button:hover {
+    background-color: var(--skip-btn-bg-hover) !important;
+    color: var(--skip-btn-text-color-hover) !important;
+    border-color: var(--skip-btn-bg-hover) !important;
+    text-shadow: none !important;
+    box-shadow:
+        0 0.25em 0.5em rgba(0, 0, 0, 0.25),
+        0 0 0 0.125em var(--activeColorAlpha, rgba(119, 91, 244, 0.3));
+}
+
+.skip-button:active {
+    transform: scale(0.97);
+    box-shadow: 0 0.1em 0.2em rgba(0, 0, 0, 0.3);
+}
+
+.skip-button:focus-visible {
+    outline: 0.125em solid var(--highlightOutlineColor, rgb(37, 99, 235));
+    outline-offset: 0.125em;
+}
+
+/* Hidden state */
+.skip-button.skip-button-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(0.5em);
+}
+
+/* Progress animation */
+@keyframes skipButtonLoading {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: 0% 0;
+    }
+}
+
+.skip-button:not(.skip-button-hidden):not(.no-transition) {
+    background: linear-gradient(to right,
+            var(--skip-btn-progress-color) 0%,
+            var(--skip-btn-progress-color) 50%,
+            var(--skip-btn-progress-bg) 50%,
+            var(--skip-btn-progress-bg) 100%);
+    background-size: 200% 100%;
+    animation: skipButtonLoading var(--skip-hide-duration) linear forwards;
+
+    /* GPU acceleration */
+    will-change: background-position;
+    transform: translateZ(0);
+    contain: layout paint;
+}
+
+/* Accessibility: respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .skip-button {
+        transition-duration: 0.01ms !important;
+    }
+
+    .skip-button:not(.skip-button-hidden):not(.no-transition) {
+        animation: none;
+        background-position: 0% 0;
+    }
+}
+
+/* Mobile positioning adjustments */
+.layout-mobile .skip-button-container {
+    --skip-btn-bottom: 5em;
+    --skip-btn-right: 1em;
+}
+
+/* Ensure button doesn't overlap OSD controls */
+@media (max-width: 50em) {
+    .skip-button-container {
+        --skip-btn-bottom: 5em;
+        --skip-btn-right: 1em;
+    }
+
+    .skip-button {
+        padding: 0.625em 1.5em 0.625em 1.25em;
+        font-size: 0.9em;
+    }
+}
