@@ -7,6 +7,7 @@
 
     /* Skip button positioning - adjust as needed */
     --skip-btn-bottom: 9em;
+    --skip-btn-bottom-idle: 3em;
     --skip-btn-right: 2.5em;
 
     /* Skip button colors - using ElegantFin palette */
@@ -17,34 +18,30 @@
     --skip-btn-text-color-hover: var(--darkerGradientPoint, #111827);
     --skip-btn-shadow: var(--shadow, 0 0.1em 0.15em rgba(0, 0, 0, 0.3));
 
-    /* Progress gradient colors - using theme accent */
-    --skip-btn-progress-color: var(--activeColorAlpha, rgba(119, 91, 244, 0.9));
-    --skip-btn-progress-bg: var(--headerColor, rgba(30, 40, 54, 0.8));
+    /* Progress fill - using theme accent */
+    --skip-btn-progress-color: var(--accentColor, rgba(119, 91, 244, 0.9));
 }
 
-/* Container positioning - overrides jellyfin-skipbnt defaults */
+/* Container positioning - overrides jellyfin-web defaults.
+   Sits at --skip-btn-bottom while the OSD is showing, so it clears the
+   controls, and drops to --skip-btn-bottom-idle once the OSD hides. */
 .skip-button-container {
     bottom: var(--skip-btn-bottom);
     display: flex;
     justify-content: flex-end;
     padding-right: var(--skip-btn-right);
-    transition: bottom 0.3s ease-out;
+    transition: transform 0.3s ease-out;
 }
 
-/* Dynamic positioning based on OSD visibility */
-/* When OSD is hidden, button can sit lower */
-body:has(.videoOsdBottom.videoOsdBottom-hidden) .skip-button-container,
-body:has(.videoOsdBottom.hide) .skip-button-container {
-    --skip-btn-bottom: 3em;
-}
-
-/* When OSD is visible, keep button above controls */
-body:has(.videoOsdBottom:not(.videoOsdBottom-hidden):not(.hide)) .skip-button-container {
-    --skip-btn-bottom: 9em;
+body:has(.videoOsdBottom-hidden) .skip-button-container {
+    transform: translateY(calc(var(--skip-btn-bottom) - var(--skip-btn-bottom-idle)));
 }
 
 /* Base button styles */
 .skip-button {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
     padding: 0.75em 2.125em 0.75em 1.75em;
     flex-direction: row-reverse;
     cursor: pointer;
@@ -55,18 +52,11 @@ body:has(.videoOsdBottom:not(.videoOsdBottom-hidden):not(.hide)) .skip-button-co
     border-radius: var(--largerRadius, 1.25em);
     color: var(--skip-btn-text-color);
     font-weight: 700;
-
-    /* Shadows & effects */
     text-shadow: var(--skip-btn-shadow);
     box-shadow:
         var(--skip-btn-shadow),
         inset 0 0.0625em 0 rgba(255, 255, 255, 0.1);
 
-    /* Glassmorphism effect */
-    -webkit-backdrop-filter: var(--blurDefault, blur(5px));
-    backdrop-filter: var(--blurDefault, blur(5px));
-
-    /* Performance: specific properties instead of 'all' */
     transition:
         background-color var(--skip-btn-transition-speed) ease-out,
         border-color var(--skip-btn-transition-speed) ease-out,
@@ -76,19 +66,58 @@ body:has(.videoOsdBottom:not(.videoOsdBottom-hidden):not(.hide)) .skip-button-co
         transform 0.1s ease-out;
 }
 
+/* Space between icon and label (flex gap needs Chrome 84) */
 .skip-button>*:last-child {
     margin-right: 0.5em;
 }
 
+/* jellyfin-web adds .no-transition when it re-shows the button as the OSD
+   opens; keep that an instant show instead of a fade. */
+.skip-button.no-transition {
+    transition: none;
+}
+
+/* Progress fill - a pseudo-element behind the label, scaled on the
+   compositor so the 8s countdown never repaints the button.
+   Offsets are written longhand for Chrome 79 (no inset). */
+@keyframes skipButtonLoading {
+    from {
+        transform: scaleX(0);
+    }
+
+    to {
+        transform: scaleX(1);
+    }
+}
+
+.skip-button:not(.skip-button-hidden):not(.no-transition)::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    background: var(--skip-btn-progress-color);
+    transform-origin: left;
+    animation: skipButtonLoading var(--skip-hide-duration) linear forwards;
+}
+
 /* Interactive states */
 .skip-button:hover {
-    background-color: var(--skip-btn-bg-hover) !important;
-    color: var(--skip-btn-text-color-hover) !important;
-    border-color: var(--skip-btn-bg-hover) !important;
-    text-shadow: none !important;
+    background-color: var(--skip-btn-bg-hover);
+    border-color: var(--skip-btn-bg-hover);
+    color: var(--skip-btn-text-color-hover);
+    text-shadow: none;
     box-shadow:
         0 0.25em 0.5em rgba(0, 0, 0, 0.25),
-        0 0 0 0.125em var(--activeColorAlpha, rgba(119, 91, 244, 0.3));
+        0 0 0 0.125em var(--accentColor, rgba(119, 91, 244, 0.3));
+}
+
+/* Hide the fill under the inverted hover colors. Opacity keeps the
+   countdown running, so it resumes in place when the pointer leaves. */
+.skip-button:hover::before {
+    opacity: 0;
 }
 
 .skip-button:active {
@@ -108,41 +137,15 @@ body:has(.videoOsdBottom:not(.videoOsdBottom-hidden):not(.hide)) .skip-button-co
     transform: translateY(0.5em);
 }
 
-/* Progress animation */
-@keyframes skipButtonLoading {
-    0% {
-        background-position: 100% 0;
-    }
-
-    100% {
-        background-position: 0% 0;
-    }
-}
-
-.skip-button:not(.skip-button-hidden):not(.no-transition) {
-    background: linear-gradient(to right,
-            var(--skip-btn-progress-color) 0%,
-            var(--skip-btn-progress-color) 50%,
-            var(--skip-btn-progress-bg) 50%,
-            var(--skip-btn-progress-bg) 100%);
-    background-size: 200% 100%;
-    animation: skipButtonLoading var(--skip-hide-duration) linear forwards;
-
-    /* GPU acceleration */
-    will-change: background-position;
-    transform: translateZ(0);
-    contain: layout paint;
-}
-
-/* Accessibility: respect reduced motion preferences */
+/* Accessibility: respect reduced motion preferences.
+   Transitions stay non-zero so jellyfin-web still gets its transitionend. */
 @media (prefers-reduced-motion: reduce) {
     .skip-button {
         transition-duration: 0.01ms !important;
     }
 
-    .skip-button:not(.skip-button-hidden):not(.no-transition) {
-        animation: none;
-        background-position: 0% 0;
+    .skip-button::before {
+        animation: none !important;
     }
 }
 
@@ -152,15 +155,7 @@ body:has(.videoOsdBottom:not(.videoOsdBottom-hidden):not(.hide)) .skip-button-co
     --skip-btn-right: 1em;
 }
 
-/* Ensure button doesn't overlap OSD controls */
-@media (max-width: 50em) {
-    .skip-button-container {
-        --skip-btn-bottom: 5em;
-        --skip-btn-right: 1em;
-    }
-
-    .skip-button {
-        padding: 0.625em 1.5em 0.625em 1.25em;
-        font-size: 0.9em;
-    }
+.layout-mobile .skip-button {
+    padding: 0.625em 1.5em 0.625em 1.25em;
+    font-size: 0.9em;
 }
