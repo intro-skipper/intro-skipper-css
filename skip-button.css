@@ -3,23 +3,27 @@
 :root {
     /* Skip button timing */
     --skip-hide-duration: 8s;
-    --skip-btn-transition-speed: 0.2s;
+    --skip-btn-transition-speed: 0.16s;
+    --skip-btn-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 
     /* Skip button positioning - adjust as needed */
     --skip-btn-bottom: 9em;
     --skip-btn-bottom-idle: 3em;
-    --skip-btn-right: 2.5em;
+    --skip-btn-right: calc(2em + var(--sidePadding, 3.3%));
 
     /* Skip button colors - using ElegantFin palette */
     --skip-btn-bg: var(--headerColor, rgba(30, 40, 54, 0.8));
-    --skip-btn-bg-hover: rgba(255, 255, 255, 0.95);
     --skip-btn-border-color: var(--textColor, rgb(209, 213, 219));
     --skip-btn-text-color: var(--textColor, rgb(209, 213, 219));
-    --skip-btn-text-color-hover: var(--darkerGradientPoint, #111827);
     --skip-btn-shadow: var(--shadow, 0 0.1em 0.15em rgba(0, 0, 0, 0.3));
 
-    /* Progress fill - using theme accent */
-    --skip-btn-progress-color: var(--accentColor, rgba(119, 91, 244, 0.9));
+    /* Inverted hover, press and TV focus colors are fixed, so they read
+       in both ElegantFin themes */
+    --skip-btn-bg-hover: rgba(255, 255, 255, 0.95);
+    --skip-btn-text-color-hover: #111827;
+
+    /* Theme accent for the progress fill and the hover ring */
+    --skip-btn-accent: var(--accentColor, hsl(243, 75%, 62%));
 }
 
 /* Container positioning - overrides jellyfin-web defaults.
@@ -27,10 +31,6 @@
    controls, and drops to --skip-btn-bottom-idle once the OSD hides. */
 .skip-button-container {
     bottom: var(--skip-btn-bottom);
-    display: flex;
-    justify-content: flex-end;
-    padding-right: var(--skip-btn-right);
-    transition: transform 0.3s ease-out;
 }
 
 body:has(.videoOsdBottom-hidden) .skip-button-container {
@@ -42,33 +42,41 @@ body:has(.videoOsdBottom-hidden) .skip-button-container {
     position: relative;
     overflow: hidden;
     isolation: isolate;
-    padding: 0.75em 2.125em 0.75em 1.75em;
     flex-direction: row-reverse;
-    cursor: pointer;
+    gap: 0;
+
+    /* Logical sides, so the button mirrors under dir="rtl"; the -webkit-
+       name covers TVs older than Chromium 69. The margins replace
+       jellyfin-web's and ElegantFin's; the narrower start padding sits
+       next to the icon. */
+    margin-inline-start: auto;
+    margin-inline-end: var(--skip-btn-right);
+    padding: 0.75em 2.125em;
+    -webkit-padding-start: 1.75em;
+    padding-inline-start: 1.75em;
 
     /* Appearance */
     background-color: var(--skip-btn-bg);
     border: var(--borderWidthDouble, 0.12em) solid var(--skip-btn-border-color);
     border-radius: var(--largerRadius, 1.25em);
     color: var(--skip-btn-text-color);
-    font-weight: 700;
     text-shadow: var(--skip-btn-shadow);
     box-shadow:
         var(--skip-btn-shadow),
         inset 0 0.0625em 0 rgba(255, 255, 255, 0.1);
 
-    transition:
-        background-color var(--skip-btn-transition-speed) ease-out,
-        border-color var(--skip-btn-transition-speed) ease-out,
-        color var(--skip-btn-transition-speed) ease-out,
-        box-shadow var(--skip-btn-transition-speed) ease-out,
-        opacity var(--skip-btn-transition-speed) ease-out,
-        transform 0.1s ease-out;
+    transition-property: background-color, border-color, color, box-shadow, opacity;
+    transition-duration: var(--skip-btn-transition-speed);
+    transition-timing-function: var(--skip-btn-ease-out);
 }
 
-/* Space between icon and label (flex gap needs Chrome 84) */
-.skip-button>*:last-child {
-    margin-right: 0.5em;
+/* Space between icon and label as a margin, since flex gap needs
+   Chromium 84; the button's gap: 0 drops jellyfin-web's 3px, so it's the
+   same on every engine. The -webkit- name covers TVs older than
+   Chromium 69. */
+.skip-button > .material-icons {
+    -webkit-margin-end: 0.5em;
+    margin-inline-end: 0.5em;
 }
 
 /* jellyfin-web adds .no-transition when it re-shows the button as the OSD
@@ -79,18 +87,15 @@ body:has(.videoOsdBottom-hidden) .skip-button-container {
 
 /* Progress fill - a pseudo-element behind the label, scaled on the
    compositor so the 8s countdown never repaints the button.
-   Offsets are written longhand for Chrome 79 (no inset). */
+   Offsets are longhand because inset needs Chromium 87. The fill
+   stays through the hide; .hide's display: none restarts it. */
 @keyframes skipButtonLoading {
     from {
         transform: scaleX(0);
     }
-
-    to {
-        transform: scaleX(1);
-    }
 }
 
-.skip-button:not(.skip-button-hidden):not(.no-transition)::before {
+.skip-button:not(.no-transition)::before {
     content: "";
     position: absolute;
     top: 0;
@@ -98,35 +103,71 @@ body:has(.videoOsdBottom-hidden) .skip-button-container {
     bottom: 0;
     left: 0;
     z-index: -1;
-    background: var(--skip-btn-progress-color);
+    background: var(--skip-btn-accent);
     transform-origin: left;
     animation: skipButtonLoading var(--skip-hide-duration) linear forwards;
 }
 
+[dir="rtl"] .skip-button::before {
+    transform-origin: right;
+}
+
+/* Removed here rather than gated by the motion query below, which TVs
+   older than Chromium 74 don't know */
+@media (prefers-reduced-motion: reduce) {
+    .skip-button:not(.no-transition)::before {
+        content: none;
+    }
+}
+
 /* Interactive states */
-.skip-button:hover {
+@media (hover: hover) and (pointer: fine) {
+    .skip-button:hover {
+        background-color: var(--skip-btn-bg-hover);
+        border-color: var(--skip-btn-bg-hover);
+        color: var(--skip-btn-text-color-hover);
+        text-shadow: none;
+        box-shadow:
+            0 0.25em 0.5em rgba(0, 0, 0, 0.25),
+            0 0 0 0.125em var(--skip-btn-accent);
+    }
+
+    /* Hide the fill under the inverted hover colors. Opacity keeps the
+       countdown running, so it resumes in place when the pointer leaves. */
+    .skip-button:hover::before {
+        opacity: 0;
+    }
+}
+
+/* Repeats the hover colors: a tap has no hover, and ElegantFin's own
+   :active background would sit under the light label. Kept after the
+   hover rule so the pressed shadow wins. */
+.skip-button:active {
     background-color: var(--skip-btn-bg-hover);
     border-color: var(--skip-btn-bg-hover);
     color: var(--skip-btn-text-color-hover);
     text-shadow: none;
-    box-shadow:
-        0 0.25em 0.5em rgba(0, 0, 0, 0.25),
-        0 0 0 0.125em var(--accentColor, rgba(119, 91, 244, 0.3));
-}
-
-/* Hide the fill under the inverted hover colors. Opacity keeps the
-   countdown running, so it resumes in place when the pointer leaves. */
-.skip-button:hover::before {
-    opacity: 0;
-}
-
-.skip-button:active {
     transform: scale(0.97);
     box-shadow: 0 0.1em 0.2em rgba(0, 0, 0, 0.3);
 }
 
+/* !important to get past jellyfin-web's .emby-button { outline: none !important } */
 .skip-button:focus-visible {
-    outline: 0.125em solid var(--highlightOutlineColor, rgb(37, 99, 235));
+    outline: 0.125em solid var(--highlightOutlineColor, rgb(37, 99, 235)) !important;
+    outline-offset: 0.125em;
+}
+
+/* TV focus (jellyfin-web's .show-focus) inverts like hover instead of
+   ElegantFin's blue, which is as bright as the accent fill. The fill stays,
+   since TV keeps the button focused for the whole countdown. The ring
+   repeats the :focus-visible one for TVs older than Chromium 86, and
+   !important beats ElegantFin's colors and jellyfin-web's outline. */
+.skip-button.show-focus:focus {
+    background-color: var(--skip-btn-bg-hover) !important;
+    border-color: var(--skip-btn-bg-hover);
+    color: var(--skip-btn-text-color-hover) !important;
+    text-shadow: none;
+    outline: 0.125em solid var(--highlightOutlineColor, rgb(37, 99, 235)) !important;
     outline-offset: 0.125em;
 }
 
@@ -134,28 +175,33 @@ body:has(.videoOsdBottom-hidden) .skip-button-container {
 .skip-button.skip-button-hidden {
     opacity: 0;
     pointer-events: none;
-    transform: translateY(0.5em);
 }
 
-/* Accessibility: respect reduced motion preferences.
-   Transitions stay non-zero so jellyfin-web still gets its transitionend. */
-@media (prefers-reduced-motion: reduce) {
-    .skip-button {
-        transition-duration: 0.01ms !important;
+/* Motion is opt-in; under reduced motion the button only fades.
+   jellyfin-web adds .hide on the first transitionend of any property, so
+   transform shares the fade's duration and the fade always finishes. */
+@media (prefers-reduced-motion: no-preference) {
+    .skip-button-container {
+        transition: transform 0.3s var(--skip-btn-ease-out);
     }
 
-    .skip-button::before {
-        animation: none !important;
+    .skip-button {
+        transition-property: background-color, border-color, color, box-shadow, opacity, transform;
+    }
+
+    .skip-button.skip-button-hidden {
+        transform: translateY(0.5em);
     }
 }
 
 /* Mobile positioning adjustments */
 .layout-mobile .skip-button-container {
     --skip-btn-bottom: 5em;
-    --skip-btn-right: 1em;
+    --skip-btn-right: calc(1em + var(--sidePadding, 3.3%));
 }
 
 .layout-mobile .skip-button {
-    padding: 0.625em 1.5em 0.625em 1.25em;
+    padding: 0.625em 1.5em;
+    padding-inline-start: 1.25em;
     font-size: 0.9em;
 }
