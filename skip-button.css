@@ -22,8 +22,14 @@
     --skip-btn-bg-hover: rgba(255, 255, 255, 0.95);
     --skip-btn-text-color-hover: #111827;
 
-    /* Theme accent for the progress fill and the hover ring */
+    /* Theme accent for the progress fill and the hover and focus ring */
     --skip-btn-accent: var(--accentColor, hsl(243, 75%, 62%));
+
+    /* A box-shadow ring follows the pill's radius on every engine; an
+       outline only does from Chromium 94 */
+    --skip-btn-ring-shadow:
+        0 0.25em 0.5em rgba(0, 0, 0, 0.25),
+        0 0 0 0.125em var(--skip-btn-accent);
 }
 
 /* Container positioning - overrides jellyfin-web defaults.
@@ -127,9 +133,7 @@ body:has(.videoOsdBottom-hidden) .skip-button-container {
         border-color: var(--skip-btn-bg-hover);
         color: var(--skip-btn-text-color-hover);
         text-shadow: none;
-        box-shadow:
-            0 0.25em 0.5em rgba(0, 0, 0, 0.25),
-            0 0 0 0.125em var(--skip-btn-accent);
+        box-shadow: var(--skip-btn-ring-shadow);
     }
 
     /* Hide the fill under the inverted hover colors. Opacity keeps the
@@ -151,24 +155,24 @@ body:has(.videoOsdBottom-hidden) .skip-button-container {
     box-shadow: 0 0.1em 0.2em rgba(0, 0, 0, 0.3);
 }
 
-/* !important to get past jellyfin-web's .emby-button { outline: none !important } */
+/* The transparent outline shows only in forced colors, which drop
+   box-shadow; !important gets past jellyfin-web's outline: none !important */
 .skip-button:focus-visible {
-    outline: 0.125em solid var(--highlightOutlineColor, rgb(37, 99, 235)) !important;
-    outline-offset: 0.125em;
+    outline: 0.125em solid transparent !important;
+    box-shadow: var(--skip-btn-ring-shadow);
 }
 
 /* TV focus (jellyfin-web's .show-focus) inverts like hover instead of
    ElegantFin's blue, which is as bright as the accent fill. The fill stays,
    since TV keeps the button focused for the whole countdown. The ring
    repeats the :focus-visible one for TVs older than Chromium 86, and
-   !important beats ElegantFin's colors and jellyfin-web's outline. */
+   !important beats ElegantFin's colors. */
 .skip-button.show-focus:focus {
     background-color: var(--skip-btn-bg-hover) !important;
     border-color: var(--skip-btn-bg-hover);
     color: var(--skip-btn-text-color-hover) !important;
     text-shadow: none;
-    outline: 0.125em solid var(--highlightOutlineColor, rgb(37, 99, 235)) !important;
-    outline-offset: 0.125em;
+    box-shadow: var(--skip-btn-ring-shadow);
 }
 
 /* Hidden state */
